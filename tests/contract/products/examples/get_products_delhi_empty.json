@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {"locationCode": "IND-DEL"},
+    "headers": {"Authorization": "Bearer ${PRODUCTS_READ_TOKEN:invalid-products-token}"}
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "body": []
+  }
+}

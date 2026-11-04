@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/location",
+    "query": {"userEmail": "blr@specmatic.io"},
+    "headers": {"Authorization": "Bearer invalid-location-token"}
+  },
+  "http-response": {
+    "status": 401,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Missing or invalid bearer token"}
+  }
+}

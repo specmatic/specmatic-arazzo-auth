@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: Product Service API
+  description: Lists products available at a location code.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8002
+paths:
+  /products:
+    get:
+      operationId: getProducts
+      summary: Get products by location
+      parameters:
+        - name: locationCode
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - passwordOAuth: [products:read]
+      responses:
+        "200":
+          description: Products for the location, or an empty array if none are available
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  securitySchemes:
+    passwordOAuth:
+      type: oauth2
+      description: OAuth 2.0 password grant; the API receives the resulting bearer access token.
+      flows:
+        password:
+          tokenUrl: http://localhost:9002/realms/commerce/protocol/openid-connect/token
+          scopes:
+            products:read: Read products
+  schemas:
+    Product:
+      type: object
+      required: [productId, name, price, inventory]
+      properties:
+        productId:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        price:
+          type: number
+          format: double
+        inventory:
+          type: integer
+          minimum: 0
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Access token does not include the products:read scope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

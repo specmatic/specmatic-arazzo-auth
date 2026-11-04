@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/location",
+    "query": {"userEmail": "unknown@specmatic.io"},
+    "headers": {"Authorization": "Bearer ${LOCATION_BEARER_TOKEN:invalid-location-token}"}
+  },
+  "http-response": {
+    "status": 404,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "User was not found"}
+  }
+}

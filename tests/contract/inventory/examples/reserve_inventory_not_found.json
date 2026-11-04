@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/inventory",
+    "query": {"orderId": 999999},
+    "headers": {"Authorization": "Bearer ${INVENTORY_RESERVE_TOKEN:invalid-inventory-token}"}
+  },
+  "http-response": {
+    "status": 404,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Order was not found"}
+  }
+}

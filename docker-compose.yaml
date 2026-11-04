@@ -1,0 +1,284 @@
+name: specmatic-arazzo-auth
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sample
+      POSTGRES_PASSWORD: sample
+      POSTGRES_DB: sample_db
+    ports:
+      - "5432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/01-keycloak-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sample -d sample_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  vault-commerce:
+    image: hashicorp/vault:1.20.0
+    cap_add:
+      - IPC_LOCK
+    command: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: commerce-root-token
+      VAULT_ADDR: http://127.0.0.1:8200
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  vault-identity:
+    image: hashicorp/vault:1.20.0
+    cap_add:
+      - IPC_LOCK
+    command: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: identity-root-token
+      VAULT_ADDR: http://127.0.0.1:8200
+    ports:
+      - "8201:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  vault-bootstrap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "scripts/bootstrap_vaults.py"]
+    environment:
+      COMMERCE_VAULT_ADDR: http://vault-commerce:8200
+      COMMERCE_VAULT_TOKEN: commerce-root-token
+      IDENTITY_VAULT_ADDR: http://vault-identity:8200
+      IDENTITY_VAULT_TOKEN: identity-root-token
+    depends_on:
+      vault-commerce:
+        condition: service_healthy
+      vault-identity:
+        condition: service_healthy
+
+  database-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "scripts/seed_data.py"]
+    environment:
+      DATABASE_URL: postgresql://sample:sample@postgres:5432/sample_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-reset:
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "scripts/seed_data.py", "--reset"]
+    environment:
+      DATABASE_URL: postgresql://sample:sample@postgres:5432/sample_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+      database-init:
+        condition: service_completed_successfully
+
+  keycloak-commerce:
+    image: quay.io/keycloak/keycloak:26.7.3
+    command: ["start-dev", "--http-port=8080", "--hostname=http://localhost:9002"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/commerce_keycloak
+      KC_DB_USERNAME: sample
+      KC_DB_PASSWORD: sample
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:9002
+    ports:
+      - "9002:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000'"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  keycloak-inventory:
+    image: quay.io/keycloak/keycloak:26.7.3
+    command: ["start-dev", "--http-port=8080", "--hostname=http://localhost:9001", "--hostname-backchannel-dynamic=true"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/inventory_keycloak
+      KC_DB_USERNAME: sample
+      KC_DB_PASSWORD: sample
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:9001
+      KC_FEATURE_JWT_AUTHORIZATION_GRANT: enabled
+    ports:
+      - "9001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000'"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  keycloak-bootstrap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "scripts/bootstrap_keycloak.py"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      COMMERCE_KC_INTERNAL: http://keycloak-commerce:8080
+      INVENTORY_KC_INTERNAL: http://keycloak-inventory:8080
+      IDENTITY_VAULT_ADDR: http://vault-identity:8200
+      IDENTITY_VAULT_TOKEN: identity-root-token
+    depends_on:
+      keycloak-commerce:
+        condition: service_healthy
+      keycloak-inventory:
+        condition: service_healthy
+      vault-bootstrap:
+        condition: service_completed_successfully
+
+  location:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: location
+    environment:
+      PORT: "8000"
+      DATABASE_URL: postgresql://sample:sample@postgres:5432/sample_db
+      COMMERCE_VAULT_ADDR: http://vault-commerce:8200
+      COMMERCE_VAULT_TOKEN: commerce-root-token
+    ports:
+      - "8001:8000"
+    depends_on:
+      database-init:
+        condition: service_completed_successfully
+      vault-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  products:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: products
+    environment:
+      PORT: "8000"
+      DATABASE_URL: postgresql://sample:sample@postgres:5432/sample_db
+      COMMERCE_ISSUER: http://localhost:9002/realms/commerce
+      COMMERCE_JWKS_URL: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/certs
+    ports:
+      - "8002:8000"
+    depends_on:
+      database-init:
+        condition: service_completed_successfully
+      keycloak-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  orders:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: orders
+    environment:
+      PORT: "8000"
+      DATABASE_URL: postgresql://sample:sample@postgres:5432/sample_db
+      COMMERCE_ISSUER: http://localhost:9002/realms/commerce
+      COMMERCE_JWKS_URL: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/certs
+    ports:
+      - "8003:8000"
+    depends_on:
+      database-init:
+        condition: service_completed_successfully
+      keycloak-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: inventory
+    environment:
+      PORT: "8000"
+      DATABASE_URL: postgresql://sample:sample@postgres:5432/sample_db
+      INVENTORY_ISSUER: http://localhost:9001/realms/inventory
+      INVENTORY_JWKS_URL: http://keycloak-inventory:8080/realms/inventory/protocol/openid-connect/certs
+    ports:
+      - "8004:8000"
+    depends_on:
+      database-init:
+        condition: service_completed_successfully
+      keycloak-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  studio:
+    image: specmatic/enterprise-snapshots:latest
+    profiles: [studio]
+    command: ["studio"]
+    environment:
+      COMMERCE_VAULT_TOKEN: ${COMMERCE_VAULT_TOKEN:-commerce-root-token}
+      IDENTITY_VAULT_TOKEN: ${IDENTITY_VAULT_TOKEN:-identity-root-token}
+      INVENTORY_CLIENT_ID: ${INVENTORY_CLIENT_ID:-inventory-client}
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./:/usr/src/app
+      - ${SPECMATIC_HOME:-${HOME}/.specmatic}:/root/.specmatic:ro
+    depends_on:
+      location:
+        condition: service_healthy
+      products:
+        condition: service_healthy
+      orders:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+

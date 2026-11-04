@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {"locationCode": "IND-BLR"},
+    "headers": {"Authorization": "Bearer ${PRODUCTS_WRONG_SCOPE_TOKEN:invalid-products-token}"}
+  },
+  "http-response": {
+    "status": 403,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Access token does not include products:read"}
+  }
+}

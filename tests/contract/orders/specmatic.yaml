@@ -1,0 +1,33 @@
+version: 3
+systemUnderTest:
+  service:
+    $ref: "#/components/services/orders"
+    runOptions:
+      $ref: "#/components/runOptions/ordersTest"
+    data:
+      examples:
+        - directories: [examples]
+specmatic:
+  settings:
+    test:
+      strictMode: true
+  governance:
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+components:
+  services:
+    orders:
+      description: Orders API provider contract suite
+      definitions:
+        - definition:
+            source:
+              filesystem:
+                directory: ../../../
+            specs: [spec/openapi/orders.yaml]
+  runOptions:
+    ordersTest:
+      openapi:
+        type: test
+        baseUrl: http://orders:8000

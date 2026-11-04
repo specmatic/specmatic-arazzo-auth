@@ -1,0 +1,9 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/inventory",
+    "query": {"orderId": 9001},
+    "headers": {"Authorization": "Bearer ${INVENTORY_RESERVE_TOKEN:invalid-inventory-token}"}
+  },
+  "http-response": {"status": 200}
+}

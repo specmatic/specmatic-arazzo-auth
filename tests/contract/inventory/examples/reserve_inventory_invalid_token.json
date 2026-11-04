@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/inventory",
+    "query": {"orderId": 9001},
+    "headers": {"Authorization": "Bearer invalid-inventory-token"}
+  },
+  "http-response": {
+    "status": 401,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "The bearer access token is invalid"}
+  }
+}

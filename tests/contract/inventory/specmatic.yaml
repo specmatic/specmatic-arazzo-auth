@@ -1,0 +1,33 @@
+version: 3
+systemUnderTest:
+  service:
+    $ref: "#/components/services/inventory"
+    runOptions:
+      $ref: "#/components/runOptions/inventoryTest"
+    data:
+      examples:
+        - directories: [examples]
+specmatic:
+  settings:
+    test:
+      strictMode: true
+  governance:
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+components:
+  services:
+    inventory:
+      description: Inventory API provider contract suite
+      definitions:
+        - definition:
+            source:
+              filesystem:
+                directory: ../../../
+            specs: [spec/openapi/inventory.yaml]
+  runOptions:
+    inventoryTest:
+      openapi:
+        type: test
+        baseUrl: http://inventory:8000

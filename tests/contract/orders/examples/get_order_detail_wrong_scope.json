@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/orders/9001",
+    "headers": {"Authorization": "Bearer ${ORDERS_CREATE_TOKEN:invalid-orders-token}"}
+  },
+  "http-response": {
+    "status": 403,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Access token does not include orders:read"}
+  }
+}

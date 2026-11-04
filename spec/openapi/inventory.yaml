@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Inventory API
+  description: Reserves inventory for an order.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8004
+paths:
+  /inventory:
+    put:
+      operationId: reserveInventory
+      summary: Reserve inventory for an order
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      security:
+        - idpJwtOAuth: [inventory:reserve]
+      responses:
+        "200":
+          description: Inventory reserved and order accepted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+components:
+  securitySchemes:
+    idpJwtOAuth:
+      type: oauth2
+      description: >-
+        OAuth 2.0 JWT Authorization Grant. The sample client signs the grant
+        assertion with one key and separately authenticates with private_key_jwt
+        using a second key. Keycloak validates both JWTs before issuing an access
+        token. Requested scopes may be downscoped from the grant assertion's scope claim.
+      x-oauth2-grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+      x-oauth2-grant-assertion-parameter: assertion
+      x-token-endpoint-client-authentication: private_key_jwt
+      x-client-assertion-type: urn:ietf:params:oauth:client-assertion-type:jwt-bearer
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:9001/realms/inventory/protocol/openid-connect/token
+          scopes:
+            inventory:reserve: Reserve inventory
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: JWT access token is not authorized to reserve inventory
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Order or product was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Order cannot be reserved or inventory is insufficient
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

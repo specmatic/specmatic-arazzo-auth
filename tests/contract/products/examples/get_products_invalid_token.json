@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {"locationCode": "IND-BLR"},
+    "headers": {"Authorization": "Bearer invalid-products-token"}
+  },
+  "http-response": {
+    "status": 401,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "The bearer access token is invalid"}
+  }
+}

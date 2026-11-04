@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/inventory",
+    "query": {"orderId": 9002},
+    "headers": {"Authorization": "Bearer ${INVENTORY_RESERVE_TOKEN:invalid-inventory-token}"}
+  },
+  "http-response": {
+    "status": 409,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Order is not pending"}
+  }
+}

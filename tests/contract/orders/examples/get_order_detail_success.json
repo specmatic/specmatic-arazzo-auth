@@ -1,0 +1,18 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/orders/9001",
+    "headers": {"Authorization": "Bearer ${ORDERS_READ_TOKEN:invalid-orders-token}"}
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "body": {
+      "orderId": 9001,
+      "userId": 1,
+      "productId": 1,
+      "inventory": 500,
+      "status": "PENDING"
+    }
+  }
+}

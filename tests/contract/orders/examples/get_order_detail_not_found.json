@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/orders/999999",
+    "headers": {"Authorization": "Bearer ${ORDERS_READ_TOKEN:invalid-orders-token}"}
+  },
+  "http-response": {
+    "status": 404,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Order was not found"}
+  }
+}

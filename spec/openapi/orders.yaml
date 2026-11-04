@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: Order Service API
+  description: Creates orders and retrieves order details.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8003
+paths:
+  /orders:
+    post:
+      operationId: createOrder
+      summary: Create an order
+      parameters:
+        - name: requestId
+          in: header
+          required: true
+          description: Correlation identifier; reusing a value creates another order.
+          schema:
+            type: string
+            format: uuid
+      security:
+        - ordersOAuth: [orders:create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedOrder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /orders/{orderId}:
+    get:
+      operationId: getOrderDetail
+      summary: Get order details
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      security:
+        - ordersOAuth: [orders:read]
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    ordersOAuth:
+      type: oauth2
+      description: OAuth 2.0 client credentials with client_secret_basic at the token endpoint.
+      x-token-endpoint-client-authentication: client_secret_basic
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:9002/realms/commerce/protocol/openid-connect/token
+          scopes:
+            orders:create: Create orders
+            orders:read: Read order details
+  schemas:
+    CreateOrderRequest:
+      type: object
+      required: [userId, productId, inventory]
+      properties:
+        userId:
+          type: integer
+          minimum: 1
+        productId:
+          type: integer
+          minimum: 1
+        inventory:
+          type: integer
+          minimum: 1
+    CreatedOrder:
+      type: object
+      required: [orderId]
+      properties:
+        orderId:
+          type: integer
+          minimum: 1
+    OrderDetail:
+      type: object
+      required: [orderId, userId, productId, inventory, status]
+      properties:
+        orderId:
+          type: integer
+          minimum: 1
+        userId:
+          type: integer
+          minimum: 1
+        productId:
+          type: integer
+          minimum: 1
+        inventory:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, OUT_FOR_DELIVERY]
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Access token does not include the required order scope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: User, product, or order was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: The requested inventory is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

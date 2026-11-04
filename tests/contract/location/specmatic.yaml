@@ -1,0 +1,33 @@
+version: 3
+systemUnderTest:
+  service:
+    $ref: "#/components/services/location"
+    runOptions:
+      $ref: "#/components/runOptions/locationTest"
+    data:
+      examples:
+        - directories: [examples]
+specmatic:
+  settings:
+    test:
+      strictMode: true
+  governance:
+    successCriteria:
+      minCoveragePercentage: 100
+      maxMissedOperationsInSpec: 0
+      enforce: true
+components:
+  services:
+    location:
+      description: Location API provider contract suite
+      definitions:
+        - definition:
+            source:
+              filesystem:
+                directory: ../../../
+            specs: [spec/openapi/location.yaml]
+  runOptions:
+    locationTest:
+      openapi:
+        type: test
+        baseUrl: http://location:8000

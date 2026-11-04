@@ -1,0 +1,137 @@
+version: 3
+systemUnderTest:
+  service:
+    definitions:
+    - definition:
+        source:
+          filesystem:
+            directory: ../../../spec
+        specs:
+        - spec:
+            id: placeOrderArazzoSpec
+            path: ./arazzo/PlaceOrder.arazzo.yaml
+    runOptions:
+      arazzo:
+        type: test
+        specs:
+        - spec:
+            id: placeOrderArazzoSpec
+            vault:
+              profiles:
+                commerceVault:
+                  type: hashicorp
+                  url: http://vault-commerce:8200
+                  version: 2
+                  mount: secret
+                  tokenKey: COMMERCE_VAULT_TOKEN
+                identityVault:
+                  type: hashicorp
+                  url: http://vault-identity:8200
+                  version: 2
+                  mount: secret
+                  tokenKey: IDENTITY_VAULT_TOKEN
+              bindings:
+              - binding:
+                  when:
+                    workflow: PlaceOrder
+                    step: getLocation
+                  use: commerceVault
+              - binding:
+                  when:
+                    workflow: PlaceOrder
+                    step: getProducts
+                  use: commerceVault
+              - binding:
+                  when:
+                    source: OrdersApi
+                    workflow: PlaceOrder
+                  use: commerceVault
+              - binding:
+                  when:
+                    workflow: PlaceOrder
+                    step: reserveInventory
+                  use: identityVault
+            security:
+              profiles:
+                locationStaticBearer:
+                  bearer:
+                    vault:
+                      secretKey: commerce
+                      field: /location_bearer_token
+                productsPasswordGrant:
+                  oauth2:
+                    grantType: password
+                    tokenUrl: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/token
+                    clientId:
+                      vault:
+                        secretKey: commerce
+                        field: /products_client_id
+                    clientAuthentication: none
+                    username:
+                      vault:
+                        secretKey: commerce
+                        field: /products_username
+                    password:
+                      vault:
+                        secretKey: commerce
+                        field: /products_password
+                ordersClientCredentialsBasic:
+                  oauth2:
+                    grantType: client_credentials
+                    tokenUrl: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/token
+                    clientId:
+                      vault:
+                        secretKey: commerce
+                        field: /orders_client_id
+                    clientSecret:
+                      vault:
+                        secretKey: commerce
+                        field: /orders_client_secret
+                inventoryJwtOauth:
+                  oauth2:
+                    grantType: urn:ietf:params:oauth:grant-type:jwt-bearer
+                    tokenUrl: http://keycloak-inventory:8080/realms/inventory/protocol/openid-connect/token
+                    clientId:
+                      env: INVENTORY_CLIENT_ID
+                    clientAuthentication: private_key_jwt
+                    clientAssertionAudience: http://localhost:9001/realms/inventory
+                    privateKey:
+                      vault:
+                        secretKey: inventory
+                        field: /client_private_key
+                    keyId: inventory-client-auth-key
+                    grantAssertion:
+                      issuer: https://inventory-grant-issuer.example.test
+                      subject: inventory-demo-subject
+                      audience: http://localhost:9001/realms/inventory
+                      privateKey:
+                        vault:
+                          secretKey: inventory
+                          field: /grant_private_key
+                      keyId: inventory-grant-key
+              bindings:
+              - binding:
+                  when:
+                    workflow: PlaceOrder
+                    step: getLocation
+                  use: locationStaticBearer
+              - binding:
+                  when:
+                    workflow: PlaceOrder
+                    step: getProducts
+                  use: productsPasswordGrant
+              - binding:
+                  when:
+                    source: OrdersApi
+                    workflow: PlaceOrder
+                  use: ordersClientCredentialsBasic
+              - binding:
+                  when:
+                    workflow: PlaceOrder
+                    step: reserveInventory
+                  use: inventoryJwtOauth
+            baseUrls:
+              OrdersApi: http://orders:8000
+              LocationApi: http://location:8000
+              ProductsApi: http://products:8000
+              InventoryApi: http://inventory:8000

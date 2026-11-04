@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/location",
+    "query": {"userEmail": "del@specmatic.io"},
+    "headers": {"Authorization": "Bearer ${LOCATION_BEARER_TOKEN:invalid-location-token}"}
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"userId": 2, "locationCode": "IND-DEL"}
+  }
+}

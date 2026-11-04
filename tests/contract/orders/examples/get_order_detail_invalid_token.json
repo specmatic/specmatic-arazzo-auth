@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/orders/9001",
+    "headers": {"Authorization": "Bearer invalid-orders-token"}
+  },
+  "http-response": {
+    "status": 401,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "The bearer access token is invalid"}
+  }
+}

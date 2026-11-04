@@ -1,0 +1,16 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {"locationCode": "IND-BLR"},
+    "headers": {"Authorization": "Bearer ${PRODUCTS_READ_TOKEN:invalid-products-token}"}
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {"Content-Type": "application/json"},
+    "body": [
+      {"productId": 1, "name": "Phone", "price": 999.0, "inventory": 500},
+      {"productId": 2, "name": "TWS", "price": 499.0, "inventory": 1000}
+    ]
+  }
+}

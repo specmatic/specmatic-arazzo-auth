@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "PUT",
+    "path": "/inventory",
+    "query": {"orderId": 9001},
+    "headers": {"Authorization": "Bearer ${INVENTORY_WRONG_SCOPE_TOKEN:invalid-inventory-token}"}
+  },
+  "http-response": {
+    "status": 403,
+    "headers": {"Content-Type": "application/json"},
+    "body": {"message": "Access token does not include inventory:reserve"}
+  }
+}
