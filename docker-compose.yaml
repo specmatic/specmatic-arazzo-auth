@@ -1,5 +1,19 @@
 name: specmatic-arazzo-auth
 
+x-mtls-healthcheck: &mtls-healthcheck
+  test:
+    - CMD
+    - python
+    - -c
+    - >-
+      import ssl, urllib.request;
+      context = ssl.create_default_context(cafile="/certs/ca.crt");
+      context.load_cert_chain("/certs/client.crt", "/certs/client.key");
+      urllib.request.urlopen("https://localhost:8000/healthz", context=context, timeout=2)
+  interval: 3s
+  timeout: 3s
+  retries: 20
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -176,16 +190,14 @@ services:
       COMMERCE_VAULT_TOKEN: commerce-root-token
     ports:
       - "8001:8000"
+    volumes:
+      - ./certs:/certs:ro
     depends_on:
       database-init:
         condition: service_completed_successfully
       vault-bootstrap:
         condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+    healthcheck: *mtls-healthcheck
 
   products:
     build:
@@ -200,16 +212,14 @@ services:
       COMMERCE_JWKS_URL: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/certs
     ports:
       - "8002:8000"
+    volumes:
+      - ./certs:/certs:ro
     depends_on:
       database-init:
         condition: service_completed_successfully
       keycloak-bootstrap:
         condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+    healthcheck: *mtls-healthcheck
 
   orders:
     build:
@@ -224,16 +234,14 @@ services:
       COMMERCE_JWKS_URL: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/certs
     ports:
       - "8003:8000"
+    volumes:
+      - ./certs:/certs:ro
     depends_on:
       database-init:
         condition: service_completed_successfully
       keycloak-bootstrap:
         condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+    healthcheck: *mtls-healthcheck
 
   inventory:
     build:
@@ -248,19 +256,17 @@ services:
       INVENTORY_JWKS_URL: http://keycloak-inventory:8080/realms/inventory/protocol/openid-connect/certs
     ports:
       - "8004:8000"
+    volumes:
+      - ./certs:/certs:ro
     depends_on:
       database-init:
         condition: service_completed_successfully
       keycloak-bootstrap:
         condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
-      interval: 3s
-      timeout: 3s
-      retries: 20
+    healthcheck: *mtls-healthcheck
 
   studio:
-    image: specmatic/enterprise-snapshots:latest
+    image: specmatic/enterprise:latest
     profiles: [studio]
     command: ["studio"]
     environment:
@@ -271,6 +277,7 @@ services:
       - "9000:9000"
     volumes:
       - ./:/usr/src/app
+      - ./certs:/usr/src/app/certs:ro
       - ${SPECMATIC_HOME:-${HOME}/.specmatic}:/root/.specmatic:ro
     depends_on:
       location:

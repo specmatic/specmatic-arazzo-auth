@@ -3,8 +3,9 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
+import requests
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from testcontainers.core.container import DockerContainer
@@ -47,6 +48,15 @@ class TestConfig(BaseSettings):
     specmatic_workflow_image: str
     specmatic_home: Path = Field(default_factory=lambda: Path.home() / ".specmatic")
     container_timeout_seconds: int = 300
+    mtls_ca_cert: Path = ROOT / "certs/ca.crt"
+    mtls_client_cert: Path = ROOT / "certs/client.crt"
+    mtls_client_key: Path = ROOT / "certs/client.key"
+
+    def request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
+        kwargs.setdefault("cert", (str(self.mtls_client_cert), str(self.mtls_client_key)))
+        kwargs.setdefault("verify", str(self.mtls_ca_cert))
+        kwargs.setdefault("timeout", 10)
+        return requests.request(method, url, **kwargs)
 
     def reset_sample_data(self) -> None:
         seed(reset=True, database_url=self.database_url)
@@ -167,6 +177,7 @@ class TestConfig(BaseSettings):
         container = (
             DockerContainer(image)
             .with_volume_mapping(str(self.project_root), "/usr/src/app", mode="rw")
+            .with_volume_mapping(str(self.project_root / "certs"), "/usr/src/app/certs", mode="ro")
             .with_kwargs(network_mode=self.compose_network, working_dir=working_directory)
             .with_command(command)
             .with_envs(**environment)

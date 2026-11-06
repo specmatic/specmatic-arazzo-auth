@@ -16,11 +16,11 @@ def decode_payload(token: str) -> dict[str, object]:
 
 
 def update_inventory(access_token: str, order_id: int = 9001) -> requests.Response:
-    return requests.put(
+    return test_config.request(
+        "PUT",
         f"{test_config.inventory_api_url}/inventory",
         params={"orderId": order_id},
         headers={"Authorization": f"Bearer {access_token}"},
-        timeout=10,
     )
 
 

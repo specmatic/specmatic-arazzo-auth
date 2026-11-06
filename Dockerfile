@@ -25,5 +25,5 @@ COPY scripts ./scripts
 
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
-CMD ["sh", "-c", "uvicorn services.${SERVICE_NAME}.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn services.${SERVICE_NAME}.app:app --host 0.0.0.0 --port ${PORT:-8000} --ssl-certfile /certs/server.crt --ssl-keyfile /certs/server.key --ssl-ca-certs /certs/ca.crt --ssl-cert-reqs 2"]
 

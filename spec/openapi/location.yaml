@@ -4,7 +4,7 @@ info:
   description: Looks up a user's location by email address.
   version: 1.0.0
 servers:
-  - url: http://localhost:8001
+  - url: https://localhost:8001
 paths:
   /location:
     get:

@@ -3,7 +3,6 @@ from __future__ import annotations
 import uuid
 
 import pytest
-import requests
 
 from tests.contract.config import test_config
 
@@ -28,12 +27,11 @@ def test_orders_reject_missing_or_invalid_bearer(
     if authorization:
         headers["Authorization"] = authorization
 
-    response = requests.request(
+    response = test_config.request(
         method,
         f"{test_config.orders_api_url}{path}",
         json=body,
         headers=headers,
-        timeout=10,
     )
 
     assert response.status_code == 401, response.text

@@ -21,15 +21,15 @@ systemUnderTest:
                 commerceVault:
                   type: hashicorp
                   url: http://vault-commerce:8200
-                  version: 2
                   mount: secret
                   tokenKey: COMMERCE_VAULT_TOKEN
+                  version: 2
                 identityVault:
                   type: hashicorp
                   url: http://vault-identity:8200
-                  version: 2
                   mount: secret
                   tokenKey: IDENTITY_VAULT_TOKEN
+                  version: 2
               bindings:
               - binding:
                   when:
@@ -53,20 +53,29 @@ systemUnderTest:
                   use: identityVault
             security:
               profiles:
+                apiMtls:
+                  mtls:
+                    keyStore:
+                      file: ../../../certs/specmatic-client.jks
+                      alias: specmatic-client
+                      password: changeit
+                    keyStorePassword: changeit
                 locationStaticBearer:
+                  extends: apiMtls
                   bearer:
                     vault:
                       secretKey: commerce
                       field: /location_bearer_token
                 productsPasswordGrant:
+                  extends: apiMtls
                   oauth2:
                     grantType: password
                     tokenUrl: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/token
+                    clientAuthentication: none
                     clientId:
                       vault:
                         secretKey: commerce
                         field: /products_client_id
-                    clientAuthentication: none
                     username:
                       vault:
                         secretKey: commerce
@@ -76,9 +85,11 @@ systemUnderTest:
                         secretKey: commerce
                         field: /products_password
                 ordersClientCredentialsBasic:
+                  extends: apiMtls
                   oauth2:
                     grantType: client_credentials
                     tokenUrl: http://keycloak-commerce:8080/realms/commerce/protocol/openid-connect/token
+                    clientAuthentication: client_secret_basic
                     clientId:
                       vault:
                         secretKey: commerce
@@ -88,18 +99,20 @@ systemUnderTest:
                         secretKey: commerce
                         field: /orders_client_secret
                 inventoryJwtOauth:
+                  extends: apiMtls
                   oauth2:
                     grantType: urn:ietf:params:oauth:grant-type:jwt-bearer
                     tokenUrl: http://keycloak-inventory:8080/realms/inventory/protocol/openid-connect/token
+                    clientAuthentication: private_key_jwt
                     clientId:
                       env: INVENTORY_CLIENT_ID
-                    clientAuthentication: private_key_jwt
-                    clientAssertionAudience: http://localhost:9001/realms/inventory
                     privateKey:
                       vault:
                         secretKey: inventory
                         field: /client_private_key
+                    signingAlgorithm: RS256
                     keyId: inventory-client-auth-key
+                    clientAssertionAudience: http://localhost:9001/realms/inventory
                     grantAssertion:
                       issuer: https://inventory-grant-issuer.example.test
                       subject: inventory-demo-subject
@@ -108,6 +121,7 @@ systemUnderTest:
                         vault:
                           secretKey: inventory
                           field: /grant_private_key
+                      signingAlgorithm: RS256
                       keyId: inventory-grant-key
               bindings:
               - binding:
@@ -131,7 +145,7 @@ systemUnderTest:
                     step: reserveInventory
                   use: inventoryJwtOauth
             baseUrls:
-              OrdersApi: http://orders:8000
-              LocationApi: http://location:8000
-              ProductsApi: http://products:8000
-              InventoryApi: http://inventory:8000
+              LocationApi: https://location:8000
+              ProductsApi: https://products:8000
+              OrdersApi: https://orders:8000
+              InventoryApi: https://inventory:8000

@@ -4,7 +4,7 @@ info:
   description: Lists products available at a location code.
   version: 1.0.0
 servers:
-  - url: http://localhost:8002
+  - url: https://localhost:8002
 paths:
   /products:
     get:

@@ -30,4 +30,10 @@ components:
     locationTest:
       openapi:
         type: test
-        baseUrl: http://location:8000
+        baseUrl: https://location:8000
+        cert:
+          keyStore:
+            file: ../../../certs/specmatic-client.jks
+            alias: specmatic-client
+            password: changeit
+          keyStorePassword: changeit
